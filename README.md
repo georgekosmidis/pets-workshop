@@ -4,31 +4,42 @@
 
 A small website for a fictional dog shelter: a [Flask](https://flask.palletsprojects.com/) + [SQLAlchemy](https://www.sqlalchemy.org/) backend and an [Astro](https://astro.build/) + [Tailwind CSS](https://tailwindcss.com/) frontend.
 
+> On Windows, use PowerShell. The commands below are shown for PowerShell; the
+> `bash` equivalents work on macOS/Linux.
+
 ## Run the server
 
-```bash
-cd app/server
-pip install -r requirements.txt
-python utils/seed_database.py   # create and seed the local SQLite database
-python app.py                   # serves on http://localhost:5100
+```powershell
+Set-Location app/server
+py -m pip install -r requirements.txt
+py utils/seed_database.py   # create and seed the local SQLite database
+py app.py                   # serves on http://localhost:5100
 ```
 
 ## Run the client
 
-```bash
-cd app/client
+```powershell
+Set-Location app/client
 npm install
-npm run dev                     # serves on http://localhost:4321
+npm run dev                 # serves on http://localhost:4321
 ```
 
 ## Run the tests
 
-```bash
+```powershell
 # Server unit tests
-python -m pytest app/server/test_app.py
+py -m pytest app/server/test_app.py
 
 # Client end-to-end tests
-cd app/client && npm run test:e2e
+Set-Location app/client
+npm run test:e2e
+```
+
+Prefer the helper scripts? From the repo root:
+
+```powershell
+.\app\scripts\seed-database.ps1
+.\app\scripts\start-app.ps1
 ```
 
 ## License
