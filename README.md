@@ -42,6 +42,27 @@ Prefer the helper scripts? From the repo root:
 .\app\scripts\start-app.ps1
 ```
 
-## License
+## Documentation catalogue
 
+This README is the entry point. The rest of the repository's documentation:
+
+### Getting started & demos
+- [DEMO-SETUP.md](./DEMO-SETUP.md) — Demo asset map explaining the planted bugs, insecure code and synthetic data used in live Copilot demos.
+- [next-steps.md](./next-steps.md) — Next steps after `azd init`: provisioning infrastructure, deploying, billing and troubleshooting.
+- [copilot-cost-savings.md](./copilot-cost-savings.md) — Cost-aware GitHub Copilot usage habits that reduce AI Credit consumption.
+- [LINKS.md](./LINKS.md) — Quick reference links used during the workshop.
+
+### Application
+- [app/client/README.md](./app/client/README.md) — Astro frontend starter guide and project structure.
+- [app/client/e2e-tests/README.md](./app/client/e2e-tests/README.md) — Playwright end-to-end tests overview and how to run them.
+- [scripts/README.md](./scripts/README.md) — Helper scripts for running and resetting the training sandbox.
+
+### Project & community
+- [CONTRIBUTING.md](./CONTRIBUTING.md) — How to contribute, prerequisites and the PR process.
+- [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md) — Contributor Covenant Code of Conduct.
+- [SECURITY.md](./SECURITY.md) — How to report security vulnerabilities.
+- [SUPPORT.md](./SUPPORT.md) — How to file issues and get help.
+
+## License
 Licensed under the MIT license. See [LICENSE](./LICENSE).
+
