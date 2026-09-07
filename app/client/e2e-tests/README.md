@@ -14,18 +14,18 @@ This directory contains Playwright end-to-end tests for the Tailspin Shelter web
 ### Prerequisites
 
 Make sure you have installed dependencies:
-```bash
+```powershell
 npm install
 ```
 
 You also need Python 3 with Flask dependencies installed:
-```bash
-pip install -r ../server/requirements.txt
+```powershell
+py -m pip install -r ../server/requirements.txt
 ```
 
 ### Running Tests
 
-```bash
+```powershell
 # Run all tests
 npm run test:e2e
 

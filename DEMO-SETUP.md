@@ -15,37 +15,47 @@ This repository is a training sandbox for live GitHub Copilot demos. It delibera
 | Insecure dog search endpoint | [app/server/app.py](app/server/app.py) | Security review |
 | Four distinct test failures across nine tests | [app/server/test_app.py](app/server/test_app.py) | Debugging failing tests |
 | CI workflow with test job and failing lint job | [.github/workflows/ci.yml](.github/workflows/ci.yml) | Pipeline debugging |
-| Demo reset script and facilitator notes | [scripts/reset-demo.sh](scripts/reset-demo.sh), [scripts/README.md](scripts/README.md) | Session reset workflow |
+| Demo reset script and facilitator notes | [scripts/reset-demo.ps1](scripts/reset-demo.ps1), [scripts/reset-demo.sh](scripts/reset-demo.sh), [scripts/README.md](scripts/README.md) | Session reset workflow |
 
 ## Commands to run before a session
 
-```bash
-python -m pip install -r app/server/requirements.txt pytest
-python app/server/utils/seed_database.py
-python app/server/app.py
+This workshop targets native Windows PowerShell. From the repo root:
 
-cd app/client
+```powershell
+py -m pip install -r app/server/requirements.txt pytest
+py app/server/utils/seed_database.py
+py app/server/app.py
+
+Set-Location app/client
 npm install
 npm run dev
 ```
 
+Or use the helper scripts from the repo root:
+
+```powershell
+.\app\scripts\seed-database.ps1
+.\app\scripts\start-app.ps1
+```
+
 Optional checks before the audience joins:
 
-```bash
-python -m pytest app/server/test_app.py
-cd app/client && npm run test:e2e
+```powershell
+py -m pytest app/server/test_app.py
+Set-Location app/client
+npm run test:e2e
 ```
 
 ## Commands to tag and reset the baseline
 
-```bash
+```powershell
 git add -A
 git commit -m "Prepare training demo baseline"
 git tag demo-baseline
 ```
 
-```bash
-bash scripts/reset-demo.sh
+```powershell
+.\scripts\reset-demo.ps1
 ```
 
 The reset script discards tracked changes, removes untracked files, deletes `.github/copilot-instructions.md` if it exists, and hard-resets to `demo-baseline`. It refuses to run on `main` when `origin` points at `github-samples/pets-workshop`.
