@@ -43,14 +43,34 @@ else
 fi
 
 PY=""
+# The workshop is tested on Python 3.11-3.13. Newer minors (3.14+) usually work
+# but may lack dependency wheels, so flag them instead of rejecting them.
+PY_NEWER=""; PY_NEWER_V=""; PY_OLD_V=""
 for c in python3 python; do
-  if command -v $c >/dev/null 2>&1; then
-    V=$($c -c 'import sys;print("%d.%d.%d"%sys.version_info[:3])' 2>/dev/null)
-    if [ -n "$V" ] && vge "$V" "3.11.0"; then PY=$c; ok "Python $V ($c)"; break; fi
+  if command -v "$c" >/dev/null 2>&1; then
+    RAW=$($c -c 'import sys;print("%d.%d.%d"%sys.version_info[:3])' 2>/dev/null)
+    # Keep only the first dotted-number token in case the interpreter prints noise.
+    V=$(printf '%s\n' "$RAW" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+    [ -z "$V" ] && continue
+    if vge "$V" "3.11.0" && ! vge "$V" "3.14.0"; then
+      PY=$c; ok "Python $V ($c)"; break
+    elif vge "$V" "3.14.0"; then
+      PY_NEWER=$c; PY_NEWER_V=$V
+    else
+      PY_OLD_V=$V
+    fi
   fi
 done
 if [ -z "$PY" ]; then
-  bad "No Python 3.11 or newer found" "Install Python 3.11+ from https://python.org (Windows: the Microsoft Store build works)"
+  if [ -n "$PY_NEWER" ]; then
+    PY=$PY_NEWER
+    warn "Python $PY_NEWER_V found ($PY_NEWER) - newer than the tested range (3.11-3.13)" \
+         "It will most likely work. If the dependency install below fails because a package has no wheel for Python ${PY_NEWER_V%.*}, install 3.12 alongside it and re-run this script."
+  elif [ -n "$PY_OLD_V" ]; then
+    bad "Python $PY_OLD_V is too old (need 3.11 or newer)" "Install Python 3.11-3.13 from https://python.org (Windows: the Microsoft Store build works)"
+  else
+    bad "No Python found" "Install Python 3.11-3.13 from https://python.org (Windows: the Microsoft Store build works)"
+  fi
 fi
 
 echo ""
