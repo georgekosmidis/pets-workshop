@@ -11,6 +11,59 @@ warn() { echo "  [WARN]   $1"; echo "           -> $2"; WARN=$((WARN+1)); }
 # compare dotted versions: vge 22.12.0 22.12.0 -> true
 vge() { [ "$(printf '%s\n%s\n' "$2" "$1" | sort -V | head -1)" = "$2" ]; }
 
+# Detect a VS Code extension by id, covering user-installed AND bundled
+# (built-in) extensions. Newer VS Code builds ship Copilot and Copilot Chat as
+# built-in extensions, which 'code --list-extensions' does NOT report, so a
+# CLI-only check wrongly flags them as missing. Bundled folders are often
+# renamed (e.g. the 'copilot' folder is publisher 'GitHub' name 'copilot-chat'),
+# so identity is read from each package.json, not the folder name.
+# Args: <id> <lowercased CLI list>.
+vscode_ext_present() {
+  id="$1"; list="$2"
+  # User-installed extensions are reported by the CLI - fast path.
+  printf '%s\n' "$list" | grep -qx "$id" && return 0
+  # Candidate roots for built-in (bundled) and user extension folders.
+  roots=("$HOME/.vscode/extensions" "$HOME/.vscode-insiders/extensions" "$HOME/.vscode-server/extensions")
+  # Resolve the 'code' launcher to locate the install's bundled extensions.
+  # Some builds nest them under a hashed subdir (<dir>/<hash>/resources/app/extensions).
+  codebin=$(command -v code 2>/dev/null)
+  if [ -n "$codebin" ]; then
+    codebin=$(readlink -f "$codebin" 2>/dev/null || echo "$codebin")
+    dir=$(dirname "$codebin"); i=0
+    while [ -n "$dir" ] && [ "$dir" != "/" ] && [ "$i" -lt 6 ]; do
+      [ -d "$dir/resources/app/extensions" ] && { roots+=("$dir/resources/app/extensions"); break; }
+      for sub in "$dir"/*/resources/app/extensions; do
+        [ -d "$sub" ] && { roots+=("$sub"); break 2; }
+      done
+      dir=$(dirname "$dir"); i=$((i+1))
+    done
+  fi
+  roots+=(/usr/share/code/resources/app/extensions /usr/lib/code/extensions \
+          /opt/visual-studio-code/resources/app/extensions \
+          /snap/code/current/usr/share/code/resources/app/extensions \
+          "/Applications/Visual Studio Code.app/Contents/Resources/app/extensions")
+  for root in "${roots[@]}"; do
+    [ -d "$root" ] || continue
+    for folder in "$root"/*/; do
+      [ -d "$folder" ] || continue
+      name=$(basename "$folder" | tr '[:upper:]' '[:lower:]')
+      # User-installed folders are '<id>-<version>'.
+      case "$name" in
+        "$id"|"$id"-[0-9]*) return 0 ;;
+      esac
+      # Bundled folders are renamed, so match the manifest's publisher.name.
+      pkg="${folder%/}/package.json"
+      [ -f "$pkg" ] || continue
+      pub=$(grep -oE '"publisher"[[:space:]]*:[[:space:]]*"[^"]+"' "$pkg" | head -1 | sed -E 's/.*"([^"]+)" *$/\1/')
+      nm=$(grep -oE '"name"[[:space:]]*:[[:space:]]*"[^"]+"' "$pkg" | head -1 | sed -E 's/.*"([^"]+)" *$/\1/')
+      [ -n "$pub" ] && [ -n "$nm" ] || continue
+      combined=$(printf '%s.%s' "$pub" "$nm" | tr '[:upper:]' '[:lower:]')
+      [ "$combined" = "$id" ] && return 0
+    done
+  done
+  return 1
+}
+
 echo ""
 echo "GitHub Copilot Enablement - environment check"
 echo "=============================================="
@@ -122,10 +175,14 @@ echo "Editor and Copilot"
 if command -v code >/dev/null 2>&1; then
   ok "VS Code CLI available"
   EXT=$(code --list-extensions 2>/dev/null | tr '[:upper:]' '[:lower:]')
-  echo "$EXT" | grep -q "github.copilot$"     && ok "GitHub Copilot extension"      || bad "GitHub Copilot extension missing"      "Install it: code --install-extension GitHub.copilot"
-  echo "$EXT" | grep -q "github.copilot-chat" && ok "GitHub Copilot Chat extension" || bad "GitHub Copilot Chat extension missing" "Install it: code --install-extension GitHub.copilot-chat"
-  echo "$EXT" | grep -q "ms-python.python"    && ok "Python extension"              || warn "Python extension missing"            "Recommended: code --install-extension ms-python.python"
-  echo "$EXT" | grep -q "ms-toolsai.jupyter"  && ok "Jupyter extension"             || warn "Jupyter extension missing"           "Needed for the notebook demo: code --install-extension ms-toolsai.jupyter"
+  vscode_ext_present "github.copilot" "$EXT" \
+    && ok "GitHub Copilot extension" \
+    || warn "GitHub Copilot not listed by the VS Code CLI" "Newer VS Code builds bundle Copilot as a built-in extension, which the CLI does not list. Open VS Code, sign in, and confirm Copilot works. If it does not, install it from the Extensions view by searching for 'GitHub Copilot' - do not use 'code --install-extension'."
+  vscode_ext_present "github.copilot-chat" "$EXT" \
+    && ok "GitHub Copilot Chat extension" \
+    || warn "GitHub Copilot Chat not listed by the VS Code CLI" "Newer VS Code builds bundle Copilot Chat as a built-in extension. Open the Chat view and ask a question to confirm it works. Do not run 'code --install-extension GitHub.copilot-chat' - on a bundled build it fails or, with --force, can downgrade a working setup."
+  vscode_ext_present "ms-python.python" "$EXT"   && ok "Python extension"  || warn "Python extension missing"  "Recommended: code --install-extension ms-python.python"
+  vscode_ext_present "ms-toolsai.jupyter" "$EXT" && ok "Jupyter extension" || warn "Jupyter extension missing" "Needed for the notebook demo: code --install-extension ms-toolsai.jupyter"
 else
   warn "VS Code CLI ('code') not on PATH" "Not fatal. Open VS Code and confirm manually that Copilot and Copilot Chat are installed and signed in."
 fi

@@ -31,22 +31,49 @@ function Test-Command {
     return [bool](Get-Command $Name -ErrorAction SilentlyContinue)
 }
 
-# Look for an installed VS Code extension by id. Checks user-installed extensions
-# and bundled (built-in) extensions, which 'code --list-extensions' does not report.
+# Look for an installed VS Code extension by id. Covers user-installed extensions
+# AND bundled (built-in) extensions, which 'code --list-extensions' does not report.
+# Bundled folders are often renamed (e.g. the 'copilot' folder is publisher 'GitHub'
+# name 'copilot-chat'), so identity is read from each package.json, not the folder name.
 function Test-VSCodeExtension {
     param([string]$Id, [string[]]$CliList)
-    if ($CliList -contains $Id.ToLower()) { return $true }
-    $shortId = $Id.Split('.')[-1]
-    $roots = @(
-        (Join-Path $env:USERPROFILE '.vscode/extensions')
-        (Join-Path $env:USERPROFILE 'AppData/Local/Programs/Microsoft VS Code')
-        "$env:ProgramFiles/Microsoft VS Code"
-    )
-    foreach ($root in $roots) {
+    $target = $Id.ToLower()
+    if ($CliList -contains $target) { return $true }
+
+    $roots = New-Object System.Collections.Generic.List[string]
+    $roots.Add((Join-Path $env:USERPROFILE '.vscode/extensions'))
+    $roots.Add((Join-Path $env:USERPROFILE '.vscode-insiders/extensions'))
+    # Resolve the install directory from the 'code' launcher to find built-ins.
+    # Some builds nest them under a hashed subdir (<root>/<hash>/resources/app/extensions).
+    $codeCmd = Get-Command code -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty Source
+    if ($codeCmd) {
+        $dir = Split-Path $codeCmd
+        for ($i = 0; $i -lt 6 -and $dir; $i++) {
+            $cands = @(Join-Path $dir 'resources/app/extensions')
+            $cands += (Get-ChildItem $dir -Directory -ErrorAction SilentlyContinue |
+                       ForEach-Object { Join-Path $_.FullName 'resources/app/extensions' })
+            $hit = $cands | Where-Object { Test-Path $_ } | Select-Object -First 1
+            if ($hit) { $roots.Add($hit); break }
+            $dir = Split-Path $dir
+        }
+    }
+    $roots.Add((Join-Path $env:LOCALAPPDATA 'Programs/Microsoft VS Code/resources/app/extensions'))
+    $roots.Add("$env:ProgramFiles/Microsoft VS Code/resources/app/extensions")
+
+    foreach ($root in ($roots | Select-Object -Unique)) {
         if (-not (Test-Path $root)) { continue }
-        $hit = Get-ChildItem $root -Directory -Recurse -Depth 4 -Filter $shortId -ErrorAction SilentlyContinue |
-            Where-Object { $_.FullName -match 'extensions' } | Select-Object -First 1
-        if ($hit) { return $true }
+        foreach ($folder in (Get-ChildItem $root -Directory -ErrorAction SilentlyContinue)) {
+            $name = $folder.Name.ToLower()
+            # User-installed folders are '<publisher>.<name>-<version>'.
+            if ($name -eq $target -or $name -like "$target-*") { return $true }
+            $pkg = Join-Path $folder.FullName 'package.json'
+            if (Test-Path $pkg) {
+                try {
+                    $j = Get-Content $pkg -Raw -ErrorAction Stop | ConvertFrom-Json
+                    if ("$($j.publisher).$($j.name)".ToLower() -eq $target) { return $true }
+                } catch { }
+            }
+        }
     }
     return $false
 }
