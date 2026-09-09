@@ -43,8 +43,8 @@ else
 fi
 
 PY=""
-# The workshop is tested on Python 3.11-3.13. Newer minors (3.14+) usually work
-# but may lack dependency wheels, so flag them instead of rejecting them.
+# The workshop is supported on Python 3.11-3.14 (all deps publish wheels for these).
+# Newer minors (3.15+) usually work but are unverified, so flag instead of rejecting.
 PY_NEWER=""; PY_NEWER_V=""; PY_OLD_V=""
 for c in python3 python; do
   if command -v "$c" >/dev/null 2>&1; then
@@ -52,9 +52,9 @@ for c in python3 python; do
     # Keep only the first dotted-number token in case the interpreter prints noise.
     V=$(printf '%s\n' "$RAW" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
     [ -z "$V" ] && continue
-    if vge "$V" "3.11.0" && ! vge "$V" "3.14.0"; then
+    if vge "$V" "3.11.0" && ! vge "$V" "3.15.0"; then
       PY=$c; ok "Python $V ($c)"; break
-    elif vge "$V" "3.14.0"; then
+    elif vge "$V" "3.15.0"; then
       PY_NEWER=$c; PY_NEWER_V=$V
     else
       PY_OLD_V=$V
@@ -64,12 +64,12 @@ done
 if [ -z "$PY" ]; then
   if [ -n "$PY_NEWER" ]; then
     PY=$PY_NEWER
-    warn "Python $PY_NEWER_V found ($PY_NEWER) - newer than the tested range (3.11-3.13)" \
+    warn "Python $PY_NEWER_V found ($PY_NEWER) - newer than the verified range (3.11-3.14)" \
          "It will most likely work. If the dependency install below fails because a package has no wheel for Python ${PY_NEWER_V%.*}, install 3.12 alongside it and re-run this script."
   elif [ -n "$PY_OLD_V" ]; then
-    bad "Python $PY_OLD_V is too old (need 3.11 or newer)" "Install Python 3.11-3.13 from https://python.org (Windows: the Microsoft Store build works)"
+    bad "Python $PY_OLD_V is too old (need 3.11 or newer)" "Install Python 3.11-3.14 from https://python.org (Windows: the Microsoft Store build works)"
   else
-    bad "No Python found" "Install Python 3.11-3.13 from https://python.org (Windows: the Microsoft Store build works)"
+    bad "No Python found" "Install Python 3.11-3.14 from https://python.org (Windows: the Microsoft Store build works)"
   fi
 fi
 

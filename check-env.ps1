@@ -82,10 +82,10 @@ if (Test-Command npm) {
 }
 
 $py = $null
-# The workshop is tested on Python 3.11-3.13. Newer minors (3.14+) usually work,
-# but some dependencies may not ship wheels yet, so we flag rather than reject them.
+# The workshop is supported on Python 3.11-3.14 (all deps publish wheels for these).
+# Newer minors (3.15+) usually work too but are unverified, so we flag rather than reject.
 $PyMin      = [version]'3.11'   # oldest supported (inclusive)
-$PyUntested = [version]'3.14'   # first minor we have not tested (inclusive of that series)
+$PyUntested = [version]'3.15'   # first minor we have not verified (inclusive of that series)
 
 $pyFound = @()
 foreach ($candidate in @('py', 'python', 'python3')) {
@@ -109,11 +109,11 @@ if ($pyInRange) {
     Ok "Python $($pyInRange.Version) ($($pyInRange.Name))"
 } elseif ($pyNewer) {
     $py = $pyNewer.Name
-    Warn "Python $($pyNewer.Version) found ($($pyNewer.Name)) - newer than the tested range (3.11-3.13)" "It will most likely work. If the dependency install below fails because a package has no wheel for Python $($pyNewer.Version.Major).$($pyNewer.Version.Minor), install 3.12 alongside it: winget install --id Python.Python.3.12, then re-run this script."
+    Warn "Python $($pyNewer.Version) found ($($pyNewer.Name)) - newer than the verified range (3.11-3.14)" "It will most likely work. If the dependency install below fails because a package has no wheel for Python $($pyNewer.Version.Major).$($pyNewer.Version.Minor), install 3.12 alongside it: winget install --id Python.Python.3.12, then re-run this script."
 } elseif ($pyOldest) {
-    Bad "Python $($pyOldest.Version) is too old (need 3.11 or newer)" "Install Python 3.11-3.13: winget install --id Python.Python.3.12  (or https://python.org). Tick 'Add python.exe to PATH'."
+    Bad "Python $($pyOldest.Version) is too old (need 3.11 or newer)" "Install Python 3.11-3.14: winget install --id Python.Python.3.12  (or https://python.org). Tick 'Add python.exe to PATH'."
 } else {
-    Bad "No Python found" "Install Python 3.11-3.13: winget install --id Python.Python.3.12  (or https://python.org). Tick 'Add python.exe to PATH'."
+    Bad "No Python found" "Install Python 3.11-3.14: winget install --id Python.Python.3.12  (or https://python.org). Tick 'Add python.exe to PATH'."
 }
 
 Write-Host ""
